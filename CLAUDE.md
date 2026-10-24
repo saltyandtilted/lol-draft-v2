@@ -141,4 +141,23 @@ Aktuální milník: 2
 - Když si nejsi jistý zadáním, zeptej se dřív, než začneš.
 
 ## Příkazy
-(Doplň v milníku 2: jak spustit backend, frontend a testy.)
+Spouštěj z kořene projektu (PowerShell). Backend a frontend běží každý ve svém terminálu.
+
+Struktura: `backend/` (Flask, `app/` + `tests/`), `frontend/` (React přes Vite),
+`data/` (SQLite `lol_draft.db`, není v gitu).
+
+```powershell
+# První instalace
+py -3.15 -m venv backend\.venv
+backend\.venv\Scripts\python -m pip install -r backend\requirements.txt
+npm --prefix frontend install
+
+# Backend (http://127.0.0.1:5001, health: /api/health)
+backend\.venv\Scripts\python backend\run.py
+
+# Frontend (http://localhost:5173, /api se přeposílá na backend)
+npm --prefix frontend run dev
+
+# Testy
+cd backend; .venv\Scripts\python -m pytest; cd ..
+```
