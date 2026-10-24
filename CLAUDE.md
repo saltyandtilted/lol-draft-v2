@@ -108,7 +108,7 @@ výhry, horní vrstva (MCDM) je skládá s preferencemi hráče a vysvětluje po
    explain-recommendation, new-patch).
 7. README, úklid, aktualizace CLAUDE.md přes /init.
 
-Aktuální milník: 1
+Aktuální milník: 2
 
 ## Kdo jsem a jak mě učit
 - Datový analytik, znám Python, pandas a SQL. React a Claude Code jsou pro mě nové.
