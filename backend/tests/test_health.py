@@ -8,7 +8,7 @@ def test_health_reports_ok_and_database(make_client):
     body = response.get_json()
     assert body["status"] == "ok"
     assert body["database"] == "ok"
-    assert body["schema_version"] == "1"
+    assert body["schema_version"] == "2"
     assert body["riot_api_key_configured"] is True
 
 

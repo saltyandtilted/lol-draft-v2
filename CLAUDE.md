@@ -108,7 +108,7 @@ výhry, horní vrstva (MCDM) je skládá s preferencemi hráče a vysvětluje po
    explain-recommendation, new-patch).
 7. README, úklid, aktualizace CLAUDE.md přes /init.
 
-Aktuální milník: 2
+Aktuální milník: 3
 
 ## Kdo jsem a jak mě učit
 - Datový analytik, znám Python, pandas a SQL. React a Claude Code jsou pro mě nové.
@@ -143,8 +143,8 @@ Aktuální milník: 2
 ## Příkazy
 Spouštěj z kořene projektu (PowerShell). Backend a frontend běží každý ve svém terminálu.
 
-Struktura: `backend/` (Flask, `app/` + `tests/`), `frontend/` (React přes Vite),
-`data/` (SQLite `lol_draft.db`, není v gitu).
+Struktura: `backend/` (Flask `app/`, datová pipeline `pipeline/`, `tests/`),
+`frontend/` (React přes Vite), `data/` (SQLite `lol_draft.db` a `reports/`, není v gitu).
 
 ```powershell
 # První instalace
@@ -160,4 +160,9 @@ npm --prefix frontend run dev
 
 # Testy
 cd backend; .venv\Scripts\python -m pytest; cd ..
+
+# Sběr zápasů (jde přerušit Ctrl+C a znovu spustit bez duplicit; report v data/reports/)
+cd backend; .venv\Scripts\python -m pipeline.collect --max-matches 20; cd ..
+# větší běh: --max-matches 1500 --players-per-tier 15 --matches-per-player 8
+# (skončí dřív, když dojdou hráči; nižší tiery mají za 14 dní málo her)
 ```

@@ -9,3 +9,4 @@ dist/
 *.sqlite
 *.sqlite3
 data/raw/
+data/reports/
