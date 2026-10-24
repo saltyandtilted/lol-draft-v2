@@ -8,6 +8,7 @@ import logging
 import time
 from collections import deque
 from collections.abc import Callable
+from urllib.parse import quote
 
 import requests
 
@@ -159,3 +160,13 @@ class RiotClient:
 
     def match(self, match_id: str) -> dict | None:
         return self.get(self.region, f"/lol/match/v5/matches/{match_id}")
+
+    # --- Endpoints used by the app (player profile) -------------------------------------------
+
+    def account_by_riot_id(self, game_name: str, tag_line: str) -> dict | None:
+        path = f"/riot/account/v1/accounts/by-riot-id/{quote(game_name)}/{quote(tag_line)}"
+        return self.get(self.region, path)
+
+    def mastery_by_puuid(self, puuid: str) -> list[dict]:
+        path = f"/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}"
+        return self.get(self.platform, path) or []

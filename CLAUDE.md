@@ -152,11 +152,13 @@ py -3.15 -m venv backend\.venv
 backend\.venv\Scripts\python -m pip install -r backend\requirements.txt
 npm --prefix frontend install
 
-# Backend (http://127.0.0.1:5001, health: /api/health)
+# Backend (http://127.0.0.1:5001). Endpointy: GET /api/health, /api/meta, /api/champions,
+# POST /api/recommend (čte jen agregace z SQLite; profil hráče z Riot API v cache 15 min)
 backend\.venv\Scripts\python backend\run.py
 
 # Frontend (http://localhost:5173, /api se přeposílá na backend)
 npm --prefix frontend run dev
+npm --prefix frontend run lint
 
 # Testy
 cd backend; .venv\Scripts\python -m pytest; cd ..

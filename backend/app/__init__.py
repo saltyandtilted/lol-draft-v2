@@ -4,7 +4,7 @@ import sqlite3
 
 from flask import Flask, jsonify
 
-from . import db
+from . import api, db
 from .config import Config
 
 
@@ -32,4 +32,5 @@ def create_app(overrides: dict | None = None) -> Flask:
             riot_api_key_configured=bool(app.config["RIOT_API_KEY"]),
         )
 
+    app.register_blueprint(api.bp)
     return app
