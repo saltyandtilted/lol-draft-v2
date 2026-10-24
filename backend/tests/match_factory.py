@@ -19,6 +19,13 @@ def make_match(match_id: str = "EUN1_TEST_1", blue_win: bool = True, **info_over
                     "win": blue_win if team_id == 100 else not blue_win,
                     "gameEndedInEarlySurrender": False,
                     "puuid": f"TEST-PUUID-{team_id}-{i}",
+                    # Fake stats: even positions deal physical damage, odd ones magic damage.
+                    "physicalDamageDealtToChampions": 20000 if i % 2 == 0 else 2000,
+                    "magicDamageDealtToChampions": 2000 if i % 2 == 0 else 20000,
+                    "trueDamageDealtToChampions": 1000,
+                    "totalDamageTaken": 30000 if position == "TOP" else 15000,
+                    "damageSelfMitigated": 25000 if position == "TOP" else 8000,
+                    "timeCCingOthers": 40 if position == "UTILITY" else 10,
                 }
             )
     info = {

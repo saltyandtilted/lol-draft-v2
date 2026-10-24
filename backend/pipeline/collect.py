@@ -134,6 +134,18 @@ def match_known(conn, match_id: str) -> bool:
     )
 
 
+def participant_stats(p) -> tuple[int, ...]:
+    """Values for the participants stats columns, in schema order."""
+    return (
+        p.physicalDamageDealtToChampions,
+        p.magicDamageDealtToChampions,
+        p.trueDamageDealtToChampions,
+        p.totalDamageTaken,
+        p.damageSelfMitigated,
+        p.timeCCingOthers,
+    )
+
+
 def store_match(conn, match: Match, platform: str, sampled_tier: str, run_id: int) -> None:
     info = match.info
     # check_completeness guarantees exactly one winning team.
@@ -150,10 +162,12 @@ def store_match(conn, match: Match, platform: str, sampled_tier: str, run_id: in
             ),
         )
         conn.executemany(
-            "INSERT INTO participants (match_id, team_id, position, champion_id, win) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO participants (match_id, team_id, position, champion_id, win, "
+            "physical_damage, magic_damage, true_damage, damage_taken, damage_mitigated, cc_time) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 (match.metadata.matchId, p.teamId, p.teamPosition, p.championId, int(p.win))
+                + participant_stats(p)
                 for p in info.participants
             ],
         )

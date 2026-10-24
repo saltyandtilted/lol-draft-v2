@@ -52,6 +52,15 @@ cd backend; .venv\Scripts\python -m pipeline.collect <flags>; cd ..
 Run `large` runs in the background and wait for the completion notice; do not poll.
 The run is safe to interrupt: already stored matches stay, and the next run skips them.
 
+Then rebuild the aggregates the model reads:
+
+```powershell
+cd backend; .venv\Scripts\python -m pipeline.aggregate; cd ..
+```
+
+If its report warns about participant rows without stats, run `python -m pipeline.backfill`
+and aggregate again.
+
 ## 4. Review the report
 
 The collector prints the report and saves it as `data/reports/run_NNNN.md` (the newest file).
@@ -71,7 +80,8 @@ Check:
 
 In Czech, briefly:
 
-1. What ran (flags, duration) and the result (downloaded / stored / quarantined, total in the database).
+1. What ran (flags, duration) and the result (downloaded / stored / quarantined, total in the database),
+   plus the aggregation summary (matches used, share of low-data matchups and duos).
 2. Problems found in step 4, or "bez varování".
 3. One recommendation for the next run, if any.
 

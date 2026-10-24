@@ -6,7 +6,7 @@ The schema is shared by the Flask app (reads) and the data pipeline (writes).
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -54,6 +54,13 @@ CREATE TABLE IF NOT EXISTS participants (
     position    TEXT NOT NULL,         -- TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY
     champion_id INTEGER NOT NULL,
     win         INTEGER NOT NULL,
+    -- Per-player stats for the champion profile (criterion F). NULL until backfilled.
+    physical_damage  INTEGER,         -- physicalDamageDealtToChampions
+    magic_damage     INTEGER,         -- magicDamageDealtToChampions
+    true_damage      INTEGER,         -- trueDamageDealtToChampions
+    damage_taken     INTEGER,         -- totalDamageTaken
+    damage_mitigated INTEGER,         -- damageSelfMitigated
+    cc_time          INTEGER,         -- timeCCingOthers (seconds)
     PRIMARY KEY (match_id, team_id, position)
 );
 
@@ -89,6 +96,17 @@ CREATE INDEX IF NOT EXISTS idx_participants_champion ON participants(champion_id
 """
 
 
+# Columns added after schema v2: (table, column, type). Added with ALTER TABLE when missing.
+MIGRATION_COLUMNS = [
+    ("participants", "physical_damage", "INTEGER"),
+    ("participants", "magic_damage", "INTEGER"),
+    ("participants", "true_damage", "INTEGER"),
+    ("participants", "damage_taken", "INTEGER"),
+    ("participants", "damage_mitigated", "INTEGER"),
+    ("participants", "cc_time", "INTEGER"),
+]
+
+
 def connect(db_path: str) -> sqlite3.Connection:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
@@ -100,10 +118,18 @@ def connect(db_path: str) -> sqlite3.Connection:
 def init_db(db_path: str) -> None:
     with connect(db_path) as conn:
         conn.executescript(SCHEMA)
+        _add_missing_columns(conn)
         conn.execute(
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?)",
             (SCHEMA_VERSION,),
         )
+
+
+def _add_missing_columns(conn: sqlite3.Connection) -> None:
+    for table, column, sql_type in MIGRATION_COLUMNS:
+        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {sql_type}")
 
 
 def schema_version(db_path: str) -> str | None:

@@ -108,7 +108,7 @@ výhry, horní vrstva (MCDM) je skládá s preferencemi hráče a vysvětluje po
    explain-recommendation, new-patch).
 7. README, úklid, aktualizace CLAUDE.md přes /init.
 
-Aktuální milník: 3
+Aktuální milník: 4
 
 ## Kdo jsem a jak mě učit
 - Datový analytik, znám Python, pandas a SQL. React a Claude Code jsou pro mě nové.
@@ -143,7 +143,7 @@ Aktuální milník: 3
 ## Příkazy
 Spouštěj z kořene projektu (PowerShell). Backend a frontend běží každý ve svém terminálu.
 
-Struktura: `backend/` (Flask `app/`, datová pipeline `pipeline/`, `tests/`),
+Struktura: `backend/` (Flask `app/`, datová pipeline `pipeline/`, model v2 `model/`, `tests/`),
 `frontend/` (React přes Vite), `data/` (SQLite `lol_draft.db` a `reports/`, není v gitu).
 
 ```powershell
@@ -167,4 +167,10 @@ cd backend; .venv\Scripts\python -m pipeline.collect --max-matches 20; cd ..
 # (skončí dřív, když dojdou hráči; nižší tiery mají za 14 dní málo her)
 # Stav dat (běžící běhy, hráči podle tieru, poslední report); celý postup: skill /refresh-data
 cd backend; .venv\Scripts\python -m pipeline.status; cd ..
+# Doplnění statistik hráčů u starých zápasů (jednorázově po přechodu na schéma v3)
+cd backend; .venv\Scripts\python -m pipeline.backfill; cd ..
+# Přepočet agregací pro model (po každém sběru; report v data/reports/aggregate_*.md)
+cd backend; .venv\Scripts\python -m pipeline.aggregate; cd ..
+# Srovnání v1 a v2 na stejných draftech -> docs/srovnani-v1-v2.md
+cd backend; .venv\Scripts\python -m model.compare; cd ..
 ```

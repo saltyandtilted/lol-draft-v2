@@ -23,6 +23,12 @@ class Participant(_Model):
     teamPosition: str = ""
     win: bool
     gameEndedInEarlySurrender: bool = False
+    physicalDamageDealtToChampions: int = 0
+    magicDamageDealtToChampions: int = 0
+    trueDamageDealtToChampions: int = 0
+    totalDamageTaken: int = 0
+    damageSelfMitigated: int = 0
+    timeCCingOthers: int = 0
 
 
 class Ban(_Model):

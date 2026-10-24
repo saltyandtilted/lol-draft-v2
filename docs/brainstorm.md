@@ -53,3 +53,20 @@ Cíl je funkční stránka, ne nová diplomka.
 6. **Metody podle plánu, nejvhodnější varianty:** kontrolní metody (PROMETHEE II, VIKOR),
    nejistota vah (SMAA) a validace proti baseline zůstávají tak, jak jsou v docs/plan.md.
    Slouží kvalitě doporučení, ne výzkumu.
+
+## Dodatek z milníku 4 (24. 10. 2026)
+
+- **Úprava rozhodnutí 1: stejné váhy A až D.** Na 554 zápasech jsou koeficienty logistické
+  regrese nespolehlivé. A až D mají stejnou jednotku (log-odds), takže stejné váhy jsou totéž
+  co jejich součet: W = A + B + C + D + λ·S je odhad změny šance na výhru. Regrese zůstává jako
+  diagnostika (`model/regression.py`); jako zdroj vah ji zvážíme v milníku 6.
+- **TOPSIS skládá tři cíle {W, E, F}, ne sedm kritérií.** S A až D jako samostatnými kritérii
+  plná mastery přebila rozdíl síly hrdinů zhruba o 7 p. b. (chyba v1 by se opakovala). AHP
+  matice teď porovnává rozsahy (swing weighting): plný komfort odpovídá asi 3 až 4 p. b.
+- **Blind safety S** = −rozptyl matchupových odchylek, vyhlazený k průměru role (jinak by
+  málo dat vypadalo jako bezpečný pick). λ klesá z 0,5 při 0 známých nepřátelích na 0 při 5.
+- **Vyváženost F** se násobí podílem známých spoluhráčů (m/4); bez spoluhráčů je 0.
+- **Profil pro F** je ze statistik zápasů (poškození, utržené a zmírněné poškození, čas CC).
+- **Priory matchupů a du podle realistické velikosti efektu:** lajnový matchup sd 0,15,
+  mimolajnový 0,05, duo 0,07 log-odds. Původní shrinkage k = 50 her (sd ≈ 0,28) nechal
+  součet šumu z párů s 1 až 2 hrami přebít sílu hrdiny.
