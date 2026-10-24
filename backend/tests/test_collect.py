@@ -161,3 +161,27 @@ def test_sampling_does_not_overshoot_players_per_tier(conn):
 
     assert stats.players_sampled == 2
     assert count(conn, "players") == 2
+
+
+def test_next_run_samples_new_players(conn):
+    divisions = ("I", "II", "III", "IV")
+    histories = {f"TEST-GOLD-{d}-1": [] for d in divisions}
+    client = FakeRiotClient({}, histories)
+    run_collect(conn, client)
+    assert count(conn, "players") == 4
+
+    histories.update({f"TEST-GOLD-{d}-2": [] for d in divisions})
+    run_collect(conn, client, run_id=2)
+
+    assert count(conn, "players") == 8
+
+
+def test_status_prints_summary(conn, tmp_path, capsys):
+    from pipeline import status
+
+    run_collect(conn, scenario())
+    status.main(["--db", str(tmp_path / "test.db")])
+
+    out = capsys.readouterr().out
+    assert "Matches: 5, quarantined: 2" in out
+    assert "GOLD: 2 / 0" in out

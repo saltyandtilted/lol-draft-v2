@@ -165,4 +165,6 @@ cd backend; .venv\Scripts\python -m pytest; cd ..
 cd backend; .venv\Scripts\python -m pipeline.collect --max-matches 20; cd ..
 # větší běh: --max-matches 1500 --players-per-tier 15 --matches-per-player 8
 # (skončí dřív, když dojdou hráči; nižší tiery mají za 14 dní málo her)
+# Stav dat (běžící běhy, hráči podle tieru, poslední report); celý postup: skill /refresh-data
+cd backend; .venv\Scripts\python -m pipeline.status; cd ..
 ```

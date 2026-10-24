@@ -73,9 +73,14 @@ def refresh_champions(conn: sqlite3.Connection) -> str:
 
 
 def sample_players(conn, client: RiotClient, tiers: list[str], players_per_tier: int, stats: RunStats):
-    """Top up every tier to `players_per_tier` players, spread over its divisions."""
+    """Top up every tier to `players_per_tier` pending players, spread over its divisions.
+
+    Counting only players whose history is not listed yet makes every new run sample fresh players.
+    """
     for tier in tiers:
-        have = conn.execute("SELECT COUNT(*) FROM players WHERE tier = ?", (tier,)).fetchone()[0]
+        have = conn.execute(
+            "SELECT COUNT(*) FROM players WHERE tier = ? AND matches_listed_at IS NULL", (tier,)
+        ).fetchone()[0]
         missing = players_per_tier - have
         if missing <= 0:
             continue
@@ -248,7 +253,9 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Collect ranked solo matches into SQLite.")
     parser.add_argument("--max-matches", type=int, default=20, help="match details to download")
     parser.add_argument("--tiers", nargs="+", default=TIERS, choices=TIERS)
-    parser.add_argument("--players-per-tier", type=int, default=5)
+    parser.add_argument(
+        "--players-per-tier", type=int, default=5, help="new (not yet processed) players per tier"
+    )
     parser.add_argument("--matches-per-player", type=int, default=20)
     parser.add_argument("--days", type=int, default=14, help="only matches from the last N days")
     parser.add_argument("--db", default=Config.DATABASE_PATH)
