@@ -64,7 +64,9 @@ def _why(row: pd.Series, neutral: dict, goals: dict, coef: dict, active: list[st
 
 
 def recommend(agg: Aggregates, draft: Draft, profile: PlayerProfile | None = None,
-              top_n: int = TOP_N, smaa_samples: int = smaa.SAMPLES) -> Recommendation:
+              top_n: int = TOP_N, smaa_samples: int = smaa.SAMPLES,
+              stability_k: int | None = None) -> Recommendation:
+    """`stability_k` is the k of "probability to stay in the top k" (default: top_n)."""
     values = criteria.compute(agg, draft, profile)
     weights, cr = goal_weights()
     coef = win_coefficients(draft.known_enemies)
@@ -90,7 +92,8 @@ def recommend(agg: Aggregates, draft: Draft, profile: PlayerProfile | None = Non
     score = mcdm.topsis(norm, weights, active)
     promethee = mcdm.promethee_ii(norm, weights, active)
     vikor = mcdm.vikor(norm, weights, active)
-    stability = smaa.top_k_probability(norm, weights, active, samples=smaa_samples, k=top_n)
+    stability = smaa.top_k_probability(norm, weights, active, samples=smaa_samples,
+                                         k=stability_k or top_n)
     meta["dropped_criteria"] = dropped
     meta["spearman"] = {
         "promethee_ii": round(mcdm.spearman(score, promethee), 3),

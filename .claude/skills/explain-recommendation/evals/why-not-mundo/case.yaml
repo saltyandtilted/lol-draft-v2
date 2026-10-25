@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: why-not-mundo
+expected_outcome: |
+  Runs model.explain for the draft with Dr. Mundo as the focus champion and explains in Czech his rank and the criteria where he loses to Sett, with uncertainty.

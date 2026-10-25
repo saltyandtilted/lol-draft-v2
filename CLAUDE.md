@@ -108,7 +108,7 @@ výhry, horní vrstva (MCDM) je skládá s preferencemi hráče a vysvětluje po
    explain-recommendation, new-patch).
 7. README, úklid, aktualizace CLAUDE.md přes /init.
 
-Aktuální milník: 4
+Aktuální milník: 6
 
 ## Kdo jsem a jak mě učit
 - Datový analytik, znám Python, pandas a SQL. React a Claude Code jsou pro mě nové.
@@ -175,4 +175,9 @@ cd backend; .venv\Scripts\python -m pipeline.backfill; cd ..
 cd backend; .venv\Scripts\python -m pipeline.aggregate; cd ..
 # Srovnání v1 a v2 na stejných draftech -> docs/srovnani-v1-v2.md
 cd backend; .venv\Scripts\python -m model.compare; cd ..
+# Backtest: agregace z předposledního patche, test na posledním -> docs/vysledky.md + docs/img/
+# (DB nemění; asi 3 min; --train-patch/--test-patch, --drafts N; po novém patchi skill /new-patch)
+cd backend; .venv\Scripts\python -m model.backtest; cd ..
+# Vysvětlení doporučení jako JSON (bez Riot API, D a E neutrální); skill /explain-recommendation
+cd backend; .venv\Scripts\python -m model.explain --position TOP --ally "Lee Sin:JUNGLE" --enemy "Darius:TOP" --champion Sett; cd ..
 ```
