@@ -15,7 +15,10 @@ MIN_ROLE_SHARE = 0.05
 OFF_LANE_WEIGHT = 0.5
 # Personal form: half-life of a game's weight and prior strength in games.
 FORM_HALF_LIFE_DAYS = 30
-FORM_PRIOR_GAMES = 10
+# 50 prior games: a player's true edge on a champion is a few percentage points, while a handful
+# of games swings the raw win rate by tens. With 10, 3 wins in 3 games gave +11 pp and outweighed
+# every other criterion (seen on a real Challenger profile); with 50 it is about +3 pp.
+FORM_PRIOR_GAMES = 50
 # Comfort: mastery saturates at this many points; recency decays with this time constant.
 MASTERY_SATURATION = 200_000
 RECENCY_DAYS = 90

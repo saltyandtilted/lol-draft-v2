@@ -17,7 +17,9 @@ PLATFORMS = {
     "na1": {"label": "NA", "region": "americas"},
     "kr": {"label": "KR", "region": "asia"},
 }
-RECENT_GAMES = 20
+# Each game is one match-v5 request: 50 games + account + mastery stay under the 100 requests
+# per 2 minutes of a development key, and the profile is cached for CACHE_SECONDS.
+RECENT_GAMES = 50
 CACHE_SECONDS = 15 * 60
 DAY_MS = 86_400_000
 

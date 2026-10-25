@@ -208,4 +208,8 @@ hrdina s nejvyšší mastery hráče; původní model v1 z diplomky (jen jako sr
 - [x] Backtest 16.20 → 16.21 (docs/vysledky.md): predikce výhry od konstanty neprůkazná
   (AUC 0,53), hit@5 v2 pod jednoduchými baseline. Hlavní omezení je málo dat.
 - [ ] Víc zápasů (tisíce na patch), aby B a C nebyly jen priory; pak backtest zopakovat
-  (skill `/new-patch`). Osobní kritéria D a E zatím nejsou validovaná.
+  (skill `/new-patch`).
+- [x] D a E vyzkoušené na reálném profilu (Challenger EUNE, 25. 10. 2026): s priorem 10 her dala
+  forma po 3 výhrách ze 3 +11 pb a přebila vše ostatní. Prior zvýšen na 50 her a profil bere
+  50 posledních her místo 20; teď stejný případ dává zhruba +2 až 3 pb. Systematicky
+  validované (backtest s profily) D a E nejsou.

@@ -67,9 +67,9 @@ def test_s_prefers_low_matchup_spread():
 
 
 def test_d_personal_form_rewards_recent_wins_and_ignores_unplayed():
-    profile = PlayerProfile(games=[PlayerGame(AP_MAGE, True, 2) for _ in range(8)]
-                            + [PlayerGame(WEAK, False, 3) for _ in range(8)]
-                            + [PlayerGame(AD_TANK, True, 365) for _ in range(8)])
+    profile = PlayerProfile(games=[PlayerGame(AP_MAGE, True, 2) for _ in range(20)]
+                            + [PlayerGame(WEAK, False, 3) for _ in range(20)]
+                            + [PlayerGame(AD_TANK, True, 365) for _ in range(20)])
 
     out = criteria.compute(make_aggregates(), Draft("TOP"), profile)
 
@@ -77,6 +77,17 @@ def test_d_personal_form_rewards_recent_wins_and_ignores_unplayed():
     assert out.loc[WEAK, "D"] < -0.3
     assert 0 < out.loc[AD_TANK, "D"] < 0.05  # a year old: almost no weight
     assert out.loc[AD_CARRY, "D"] == 0
+
+
+def test_d_few_games_do_not_outweigh_champion_strength():
+    # 3 wins in 3 recent games is mostly luck: a small bonus, not enough to lift
+    # the weakest champion (A -0.2) above the strongest (A +0.1).
+    profile = PlayerProfile(games=[PlayerGame(WEAK, True, 1) for _ in range(3)])
+
+    out = criteria.compute(make_aggregates(), Draft("TOP"), profile)
+
+    assert 0 < out.loc[WEAK, "D"] < 0.15  # under ~4 percentage points (it was ~0.5 with 10 prior games)
+    assert out.loc[WEAK, "W"] < out.loc[AD_TANK, "W"]
 
 
 def test_e_comfort_saturates_and_decays():
