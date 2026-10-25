@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # LoL draft doporučovač – lokální prototyp
 
 ## O projektu
@@ -8,9 +12,11 @@ Je to NOVÁ verze projektu z mé diplomové práce (React + Flask, TOPSIS + AHP)
 Diplomová práce se nemění a nový výzkum se nedělá. Cílem je funkční prototyp
 lokálně na mém PC a naučit se pracovat s Claude Code.
 
+- Instalace a spuštění pro člověka: README.md
 - Plán modelu, dat a architektury: docs/plan.md
 - Průvodce, milníky a tipy k práci: docs/pruvodce.md
-- Rozhodnutí z brainstormu: docs/brainstorm.md (vznikne v milníku 1)
+- Rozhodnutí z brainstormu: docs/brainstorm.md
+- Výsledky backtestu: docs/vysledky.md (generuje `model.backtest`, ručně needitovat)
 
 ## Původní kód – jen inspirace, ne základ
 - Původní kód: `C:\Users\SaltyAndTilted\lol-topsis-project` (novější)
@@ -89,12 +95,32 @@ výhry, horní vrstva (MCDM) je skládá s preferencemi hráče a vysvětluje po
   (10 až 30 minut), takže odpověď nezávisí na rate limitu.
 - Lokálně stačí SQLite a jeden proces. Žádný Docker, Redis ani PostgreSQL.
 
+Tok dat v kódu (kde co hledat):
+1. `pipeline.collect` → Riot API (`riot_client.py`, rate limit a 429) → kontroly v `quality.py`
+   → tabulky `matches`, `participants`, `bans`, vadné zápasy do `quarantine`; Data Dragon
+   (`ddragon.py`) se obnoví sám při změně verze.
+2. `pipeline.aggregate.compute(raw)` je čistá funkce nad DataFrame (backtest ji volá jen na
+   tréninkovém patchi); `aggregate(conn)` výsledek zapíše do `champion_role_stats` (A, role_share,
+   matchup_spread pro S), `matchup_stats` (B), `duo_stats` (C), `champion_profile` (F)
+   a `aggregate_meta`. Patche: aktuální váha 1,0, předchozí 0,5, starší se nepoužívají.
+3. `model.data.Aggregates` (`from_db` / `from_tables`) → `criteria.compute` vrátí řádek na kandidáta
+   s A až F a S (blind safety = −matchup_spread).
+4. AHP (`weights.py`) neváží A až F zvlášť, ale tři cíle: W = A+B+C+D+λ·S (λ klesá s počtem známých
+   nepřátel), E, F (swing weighting). Normalizace v `mcdm.py` je proti fixním `BOUNDS`, ne proti
+   nabídce, takže ban nemění pořadí ostatních. TOPSIS řadí, PROMETHEE II, VIKOR a `smaa.py` kontrolují.
+5. `recommend.recommend()` skládá výstup (příspěvky, „why“, nejistota). API (`app/api.py`) drží
+   `Aggregates` v paměti a znovu je načte, jen když se změní `aggregate_meta.computed_at`;
+   profil hráče (`app/profile.py`) je v cache 15 minut. Testy podstrkují `AGGREGATES`
+   a `RIOT_CLIENT_FACTORY` přes konfiguraci aplikace.
+
 ## Validace (docs/plan.md, sekce Validace a evaluace)
 - Test na zápasech z novějšího patche než agregace. Pozor na data leakage.
 - Baseline: nejvyšší vyhlazený winrate v roli, nejhranější hrdina,
   nejvyšší mastery hráče, původní model v1 (jen jako srovnávací funkce).
 - Metriky: log-loss, Brier, AUC, kalibrace; hit@k; stabilita top 5 (SMAA).
 - Očekávaná přesnost predikce z draftu je jen 52 až 60 %.
+- Stav (backtest 16.20 → 16.21): AUC 0,53, od konstanty neprůkazné; hit@5 v2 je pod baseline
+  „nejhranější“ a „vyhlazený winrate“. Příčina je hlavně málo dat (matchupy a dua pod prahem).
 
 ## Milníky (podrobně v docs/pruvodce.md)
 1. Brainstorm: přečti plán a původní kód (jen čtení), zapiš rozhodnutí
@@ -108,7 +134,7 @@ výhry, horní vrstva (MCDM) je skládá s preferencemi hráče a vysvětluje po
    explain-recommendation, new-patch).
 7. README, úklid, aktualizace CLAUDE.md přes /init.
 
-Aktuální milník: 6
+Aktuální milník: 7 (poslední)
 
 ## Kdo jsem a jak mě učit
 - Datový analytik, znám Python, pandas a SQL. React a Claude Code jsou pro mě nové.
@@ -160,7 +186,9 @@ backend\.venv\Scripts\python backend\run.py
 npm --prefix frontend run dev
 npm --prefix frontend run lint
 
-# Testy
+# Testy (jeden test: ... -m pytest tests/test_backtest.py::test_split_has_no_leakage_and_trains_on_older_patch)
+# Testovací data jsou syntetická: tests/match_factory.py (falešné odpovědi match-v5),
+# tests/model_factory.py (agregace), FakeRiotClient a fixture conn v tests/test_collect.py.
 cd backend; .venv\Scripts\python -m pytest; cd ..
 
 # Sběr zápasů (jde přerušit Ctrl+C a znovu spustit bez duplicit; report v data/reports/)

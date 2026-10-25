@@ -50,7 +50,7 @@ class Mastery:
 
 @dataclass
 class PlayerProfile:
-    """Recent ranked games and mastery of the player. Fetched from the API in milestone 5."""
+    """Recent ranked games and mastery of the player. Fetched from the Riot API by app/profile.py."""
 
     games: list[PlayerGame] = field(default_factory=list)
     mastery: dict[int, Mastery] = field(default_factory=dict)

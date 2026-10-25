@@ -6,7 +6,7 @@ Usage (from backend/):
 Drafts come from the most recent stored matches (one pick hidden) plus three hand-made
 scenarios. This is a side-by-side comparison, not a validation: the aggregates were computed
 from the same matches (data leakage), so the rank of the actual pick is optimistic.
-Backtesting on a newer patch is milestone 6.
+The out-of-sample backtest is model.backtest (docs/vysledky.md).
 """
 
 import argparse
@@ -48,7 +48,7 @@ EXPLANATION = """\
    co kandidát přidá týmu (podíl fyzického poškození, frontline, CC).
 6. **Celková shoda je nízká** (ρ celého pořadí kolem 0, v top 5 obvykle 0 až 2 shodní).
    Je to očekávané: v1 stojí na statických scrapovaných datech a ručních seznamech, v2 na
-   zápasech z aktuálního patche. Která verze doporučuje lépe, ukáže až backtest v milníku 6.
+   zápasech z aktuálního patche. Která verze doporučuje lépe, ukazuje backtest v docs/vysledky.md.
 """
 
 
@@ -153,7 +153,7 @@ def to_markdown(agg, results, ban, ban_counts, diag) -> str:
         f"{meta['matches_used']} zápasů, agregace z {meta['computed_at']}.",
         "",
         "Nejde o validaci: agregace jsou ze stejných zápasů, ze kterých jsou drafty, takže pořadí",
-        "skutečného picku je optimistické. Backtest na novějším patchi je milník 6.",
+        "skutečného picku je optimistické. Backtest na novějším patchi je v docs/vysledky.md.",
         "",
         "## Top 5 na stejných draftech",
         "",
@@ -192,7 +192,7 @@ def to_markdown(agg, results, ban, ban_counts, diag) -> str:
               "Koeficient 1 by znamenal, že kritérium je v log-odds přesně škálované. Hodnoty nad 1 jsou",
               "tu očekávané ze dvou důvodů: vyhlazení odhady záměrně zmenšuje a regrese běží na stejných",
               "zápasech, ze kterých jsou agregace (únik dat). Proto je to jen diagnostika; váhy A až D",
-              "zůstávají stejné a regrese na odložených datech přijde v milníku 6.",
+              "zůstávají stejné; regrese na odložených datech je v docs/vysledky.md.",
               "", EXPLANATION]
     return "\n".join(lines)
 

@@ -191,7 +191,7 @@ hrdina s nejvyšší mastery hráče; původní model v1 z diplomky (jen jako sr
 - Očekávaná přesnost predikce výhry z draftu je jen 52 až 60 %. Hodnota modelu je v kalibrovaných
   malých rozdílech, ne ve vysoké přesnosti.
 
-## Rozhodnutí a stav (aktualizováno 24. 10. 2026)
+## Rozhodnutí a stav (aktualizováno 25. 10. 2026)
 
 - [x] Rozsah: osobní prototyp lokálně na mém PC. Cíl je naučit se Claude Code a vyzkoušet, co AI zvládne.
   Diplomová práce se nemění a nový výzkum se nedělá.
@@ -203,3 +203,9 @@ hrdina s nejvyšší mastery hráče; původní model v1 z diplomky (jen jako sr
   Platí 24 hodin.
 - [ ] Region a rank: EUNE. Hráč už roky nehraje, osobní historie bude nejspíš stará nebo prázdná.
   Ověřit na prototypu, případně testovat s jiným veřejným účtem.
+- [x] Prototyp hotový (milníky 1 až 7): pipeline s kontrolami kvality, model v2, API a UI,
+  backtest, skills a README.
+- [x] Backtest 16.20 → 16.21 (docs/vysledky.md): predikce výhry od konstanty neprůkazná
+  (AUC 0,53), hit@5 v2 pod jednoduchými baseline. Hlavní omezení je málo dat.
+- [ ] Víc zápasů (tisíce na patch), aby B a C nebyly jen priory; pak backtest zopakovat
+  (skill `/new-patch`). Osobní kritéria D a E zatím nejsou validovaná.

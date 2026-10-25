@@ -1,10 +1,10 @@
 # Srovnání pořadí v1 a v2
 
-Vygenerováno 2026-10-24 19:42 UTC příkazem `python -m model.compare`.
+Vygenerováno 2026-10-25 08:46 UTC příkazem `python -m model.compare`.
 Data: patch 16.21 (váhy patchů {'16.21': 1.0, '16.20': 0.5}), 1048 zápasů, agregace z 2026-10-24T19:40:47+00:00.
 
 Nejde o validaci: agregace jsou ze stejných zápasů, ze kterých jsou drafty, takže pořadí
-skutečného picku je optimistické. Backtest na novějším patchi je milník 6.
+skutečného picku je optimistické. Backtest na novějším patchi je v docs/vysledky.md.
 
 ## Top 5 na stejných draftech
 
@@ -59,7 +59,7 @@ Zápasů: 1048. Koeficienty: A 2.261, B 12.076, C 7.601, intercept 0.014.
 Koeficient 1 by znamenal, že kritérium je v log-odds přesně škálované. Hodnoty nad 1 jsou
 tu očekávané ze dvou důvodů: vyhlazení odhady záměrně zmenšuje a regrese běží na stejných
 zápasech, ze kterých jsou agregace (únik dat). Proto je to jen diagnostika; váhy A až D
-zůstávají stejné a regrese na odložených datech přijde v milníku 6.
+zůstávají stejné; regrese na odložených datech je v docs/vysledky.md.
 
 ## Proč se pořadí liší
 
@@ -81,4 +81,4 @@ zůstávají stejné a regrese na odložených datech přijde v milníku 6.
    co kandidát přidá týmu (podíl fyzického poškození, frontline, CC).
 6. **Celková shoda je nízká** (ρ celého pořadí kolem 0, v top 5 obvykle 0 až 2 shodní).
    Je to očekávané: v1 stojí na statických scrapovaných datech a ručních seznamech, v2 na
-   zápasech z aktuálního patche. Která verze doporučuje lépe, ukáže až backtest v milníku 6.
+   zápasech z aktuálního patche. Která verze doporučuje lépe, ukazuje backtest v docs/vysledky.md.
