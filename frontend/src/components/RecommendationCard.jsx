@@ -12,6 +12,12 @@ function signed(value, digits = 1) {
   return value > 0 ? `+${text}` : text
 }
 
+// Colour only values that are not zero after rounding ("+0.0 pp" in green looked like a gain).
+function tone(value, digits = 1) {
+  const shown = Number(value.toFixed(digits))
+  return shown > 0 ? 'pos' : shown < 0 ? 'neg' : ''
+}
+
 function percent(value) {
   return `${Math.round(value * 100)} %`
 }
@@ -67,7 +73,7 @@ export default function RecommendationCard({ candidate: c }) {
           {WIN_PARTS.map(([key, label]) => (
             <tr key={key}>
               <th>{label}</th>
-              <td className={c.criteria_pp[key] > 0 ? 'pos' : c.criteria_pp[key] < 0 ? 'neg' : ''}>
+              <td className={tone(c.criteria_pp[key])}>
                 {signed(c.criteria_pp[key])} pp
               </td>
               <td>{c.low_data[key] && <span className="badge" title="Few games: value shrunk towards neutral">low data</span>}</td>
@@ -80,7 +86,7 @@ export default function RecommendationCard({ candidate: c }) {
           </tr>
           <tr>
             <th>Team balance</th>
-            <td className={c.criteria.F > 0 ? 'pos' : c.criteria.F < 0 ? 'neg' : ''}>{signed(c.criteria.F, 3)}</td>
+            <td className={tone(c.criteria.F, 3)}>{signed(c.criteria.F, 3)}</td>
             <td />
           </tr>
         </tbody>

@@ -1,4 +1,4 @@
-import { GOAL_LABELS } from '../labels.js'
+import { GOAL_LABELS, POSITION_LABELS } from '../labels.js'
 import RecommendationCard from './RecommendationCard.jsx'
 
 function formatDate(iso) {
@@ -11,7 +11,11 @@ export default function Results({ result }) {
 
   return (
     <section className="results">
-      <h2>{candidates.length ? `Top ${candidates.length} for ${meta.position}` : 'No recommendation'}</h2>
+      <h2>
+        {candidates.length
+          ? `Top ${candidates.length} for ${POSITION_LABELS[meta.position] ?? meta.position}`
+          : 'No recommendation'}
+      </h2>
       {profile.used && (
         <p className="muted">
           Profile: {profile.games} recent ranked games, mastery on {profile.mastery_champions} champions

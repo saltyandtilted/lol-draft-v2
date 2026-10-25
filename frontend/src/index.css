@@ -1,13 +1,32 @@
+/* Look inspired by the League of Legends client: dark navy, gold frames, hextech teal.
+   Colours only; no Riot artwork or logos are used. */
+
 :root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color: #1f2328;
-  background: #f6f8fa;
-  --border: #d0d7de;
-  --muted: #59636e;
-  --accent: #0969da;
-  --win: #2f81f7;
-  --comfort: #bf8700;
-  --balance: #8250df;
+  color-scheme: dark;
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+
+  --bg: #010a13;
+  --panel: #0a1428;
+  --panel-2: #091428;
+  --panel-hover: #11203a;
+  --gold: #c8aa6e;
+  --gold-dark: #785a28;
+  --gold-light: #f0e6d2;
+  --text: #f0e6d2;
+  --muted: #a09b8c;
+  --border: #463714;
+  --teal: #0ac8b9;
+  --teal-dark: #005a82;
+  --ally: #0ac8b9;
+  --enemy: #e84057;
+  --pos: #3fc77b;
+  --neg: #e84057;
+  --win: #0ac8b9;
+  --comfort: #c8aa6e;
+  --balance: #9a7be6;
+  --heading: 'Cinzel', Georgia, 'Times New Roman', serif;
 }
 
 * {
@@ -15,18 +34,45 @@
 }
 
 body {
+  min-height: 100vh;
   margin: 0;
-  padding: 1.5rem 1rem;
+  padding: 1.5rem 1rem 3rem;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgb(0 90 130 / 0.35), transparent 60%),
+    radial-gradient(ellipse at 100% 100%, rgb(120 90 40 / 0.18), transparent 50%),
+    var(--bg);
+  background-attachment: fixed;
 }
 
 main {
-  max-width: 980px;
+  max-width: 1000px;
   margin: 0 auto;
+}
+
+h1,
+h2,
+h3,
+legend {
+  font-family: var(--heading);
+  letter-spacing: 0.04em;
 }
 
 h1 {
   margin: 0;
-  font-size: 1.6rem;
+  color: var(--gold);
+  font-size: 1.9rem;
+  font-weight: 700;
+  text-shadow: 0 0 18px rgb(200 170 110 / 0.25);
+}
+
+h2 {
+  margin: 0 0 0.5rem;
+  color: var(--gold);
+  font-size: 1.35rem;
+}
+
+::selection {
+  background: var(--teal-dark);
 }
 
 .top {
@@ -35,7 +81,35 @@ h1 {
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.top .status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Gold rule with a diamond in the middle, as under client headings. */
+.ornament {
+  position: relative;
+  height: 1px;
+  margin: 0.6rem 0 1.4rem;
+  background: linear-gradient(90deg, transparent, var(--gold-dark) 15%, var(--gold) 50%, var(--gold-dark) 85%, transparent);
+}
+
+.ornament::after {
+  position: absolute;
+  top: -4px;
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--gold);
+  background: var(--bg);
+  content: '';
+  transform: rotate(45deg);
 }
 
 .muted {
@@ -44,27 +118,27 @@ h1 {
 
 .ok,
 .pos {
-  color: #1a7f37;
+  color: var(--pos);
 }
 
 .error,
 .neg {
-  color: #cf222e;
+  color: var(--neg);
 }
 
 .banner {
   padding: 0.75rem 1rem;
-  border: 1px solid #ffcecb;
-  border-radius: 6px;
-  background: #ffebe9;
+  border: 1px solid rgb(232 64 87 / 0.6);
+  background: rgb(232 64 87 / 0.1);
 }
 
 .warning {
   margin: 0.4rem 0;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #f5e0a0;
-  border-radius: 6px;
-  background: #fff8c5;
+  border: 1px solid var(--gold-dark);
+  border-left: 3px solid var(--gold);
+  background: rgb(200 170 110 / 0.08);
+  color: var(--gold-light);
 }
 
 /* --- Form ----------------------------------------------------------------------------------- */
@@ -78,13 +152,32 @@ fieldset {
   margin: 0;
   padding: 0.75rem 1rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.6), 0 6px 20px rgb(0 0 0 / 0.35);
 }
 
 legend {
-  padding: 0 0.3rem;
-  font-weight: 600;
+  padding: 0 0.4rem;
+  color: var(--gold);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+fieldset.ally {
+  border-top: 2px solid var(--ally);
+}
+
+fieldset.enemy {
+  border-top: 2px solid var(--enemy);
+}
+
+fieldset.ally legend {
+  color: var(--ally);
+}
+
+fieldset.enemy legend {
+  color: var(--enemy);
 }
 
 input,
@@ -96,10 +189,26 @@ button {
 input[type='text'],
 select {
   width: 100%;
-  padding: 0.4rem 0.5rem;
+  padding: 0.45rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #fff;
+  border-radius: 0;
+  outline: none;
+  background: #010a13;
+  color: var(--text);
+}
+
+input[type='text']::placeholder {
+  color: #5b5a56;
+}
+
+input[type='text']:focus,
+select:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 1px rgb(10 200 185 / 0.35), 0 0 12px rgb(10 200 185 / 0.15);
+}
+
+select option {
+  background: var(--panel);
 }
 
 .player {
@@ -110,33 +219,103 @@ select {
 
 .player label {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.3rem;
+  color: var(--gold-light);
+  font-size: 0.9rem;
 }
 
 .roles {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
 }
 
 button {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #f6f8fa;
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--gold-dark);
+  border-radius: 0;
+  background: #1e2328;
+  color: var(--gold-light);
   cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, color 0.15s, background 0.15s;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgb(200 170 110 / 0.25);
+}
+
+button:focus-visible {
+  outline: 1px solid var(--teal);
+  outline-offset: 2px;
 }
 
 button:disabled {
   cursor: progress;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
-.role.active,
+/* Role tiles: angular, uppercase, teal when chosen. A clipped border would vanish on the
+   slanted edges, so the tile is filled with the border colour and ::before, 1px smaller and
+   clipped the same way, paints the inside. */
+.role {
+  --tile: polygon(8px 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0 50%);
+  position: relative;
+  isolation: isolate;
+  min-width: 6rem;
+  border: none;
+  background: var(--gold-dark);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  clip-path: var(--tile);
+}
+
+.role::before {
+  position: absolute;
+  z-index: -1;
+  inset: 1px;
+  background: #0f1923;
+  clip-path: var(--tile);
+  content: '';
+}
+
+.role:hover:not(:disabled) {
+  background: var(--gold);
+}
+
+.role.active {
+  background: var(--teal);
+  color: var(--teal);
+}
+
+.role.active::before {
+  background: linear-gradient(180deg, #0a323c, #06222b);
+}
+
+/* Main action: gold gradient frame like the client's play button. */
 .primary {
-  border-color: var(--accent);
-  background: var(--accent);
+  position: relative;
+  min-width: 11rem;
+  padding: 0.65rem 1.6rem;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(180deg, #1e2328, #0a1428) padding-box,
+    linear-gradient(180deg, var(--gold-light), var(--gold) 40%, var(--gold-dark)) border-box;
+  color: var(--gold-light);
+  font-family: var(--heading);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.primary:hover:not(:disabled) {
+  background:
+    linear-gradient(180deg, #2a2f35, #0f1d36) padding-box,
+    linear-gradient(180deg, #fff6e0, var(--gold) 40%, var(--gold-dark)) border-box;
+  box-shadow: 0 0 18px rgb(200 170 110 / 0.45);
   color: #fff;
 }
 
@@ -151,25 +330,37 @@ button:disabled {
   grid-template-columns: 4.5rem 1fr;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.4rem;
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .picker {
   position: relative;
+  font-size: 0.95rem;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .picker.picked {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 2.2rem;
+  min-height: 2.3rem;
   padding: 0.15rem 0.3rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--gold-dark);
+  background: rgb(200 170 110 / 0.06);
+  color: var(--gold-light);
 }
 
-.picker.picked img {
-  border-radius: 4px;
+.picker.picked img,
+.options img,
+.ban img,
+.card header img {
+  border: 1px solid var(--gold);
+  box-shadow: 0 0 0 1px #000;
 }
 
 .clear {
@@ -177,8 +368,14 @@ button:disabled {
   padding: 0 0.5rem;
   border: none;
   background: none;
+  color: var(--muted);
   font-size: 1.2rem;
   line-height: 1;
+}
+
+.clear:hover:not(:disabled) {
+  box-shadow: none;
+  color: var(--enemy);
 }
 
 .options {
@@ -191,10 +388,9 @@ button:disabled {
   margin: 2px 0 0;
   padding: 0.25rem 0;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  border: 1px solid var(--gold-dark);
+  background: #010a13;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.7);
   list-style: none;
 }
 
@@ -202,17 +398,22 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--text);
   cursor: pointer;
 }
 
 .options li:hover {
-  background: #ddf4ff;
+  background: var(--panel-hover);
+  color: var(--gold-light);
 }
 
 .options li small {
   margin-left: auto;
   color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .options .empty {
@@ -232,6 +433,7 @@ button:disabled {
 }
 
 .ban {
+  position: relative;
   padding: 0;
   border: none;
   background: none;
@@ -239,61 +441,88 @@ button:disabled {
 
 .ban img {
   display: block;
-  border-radius: 4px;
-  filter: grayscale(1);
+  border-color: var(--enemy);
+  filter: grayscale(1) brightness(0.7);
+}
+
+/* A red slash over banned champions, as in champion select. */
+.ban::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 46%, var(--enemy) 47%, var(--enemy) 53%, transparent 54%);
+  content: '';
+  pointer-events: none;
+}
+
+.ban:hover:not(:disabled) {
+  box-shadow: none;
 }
 
 .ban:hover img {
-  outline: 2px solid #cf222e;
+  filter: grayscale(0.4);
 }
 
 .actions {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 /* --- Results -------------------------------------------------------------------------------- */
 
 .results {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
+}
+
+.results > .muted {
+  margin: 0 0 0.5rem;
 }
 
 .cards {
   display: grid;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+  gap: 0.9rem;
+  margin-top: 0.9rem;
 }
 
 .card {
-  padding: 0.9rem 1rem;
+  position: relative;
+  padding: 1rem 1.1rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
+  background: linear-gradient(180deg, var(--panel), #050f1d);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.6), 0 8px 24px rgb(0 0 0 / 0.4);
+}
+
+/* The first pick gets a brighter gold frame. */
+.card:first-child {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.6), 0 0 24px rgb(200 170 110 / 0.18);
 }
 
 .card header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-}
-
-.card header img {
-  border-radius: 6px;
+  gap: 0.85rem;
 }
 
 .rank {
-  width: 2rem;
-  color: var(--muted);
-  font-size: 1.2rem;
-  font-weight: 600;
+  width: 2.2rem;
+  color: var(--gold);
+  font-family: var(--heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .title h3 {
   margin: 0;
+  color: var(--gold-light);
+  font-size: 1.25rem;
 }
 
 .title .muted {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
 }
 
 .win {
@@ -303,52 +532,64 @@ button:disabled {
 }
 
 .win strong {
-  font-size: 1.4rem;
+  color: var(--teal);
+  font-family: var(--heading);
+  font-size: 1.6rem;
+  text-shadow: 0 0 14px rgb(10 200 185 / 0.35);
 }
 
 .win .muted {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .why {
-  margin: 0.6rem 0;
+  margin: 0.7rem 0;
   padding-left: 1.2rem;
+  color: var(--gold-light);
+}
+
+.why li::marker {
+  color: var(--gold);
+  content: '◆  ';
+  font-size: 0.7em;
 }
 
 .bar {
   display: flex;
   overflow: hidden;
-  height: 10px;
-  border-radius: 5px;
-  background: #eaeef2;
+  height: 8px;
+  border: 1px solid var(--gold-dark);
+  background: #010a13;
 }
 
 .seg-W {
-  background: var(--win);
+  background: linear-gradient(90deg, var(--teal-dark), var(--win));
 }
 
 .seg-E {
-  background: var(--comfort);
+  background: linear-gradient(90deg, var(--gold-dark), var(--comfort));
 }
 
 .seg-F {
-  background: var(--balance);
+  background: linear-gradient(90deg, #4b3a8a, var(--balance));
 }
 
 .legend {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin: 0.3rem 0 0.6rem;
+  margin: 0.35rem 0 0.7rem;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .dot {
   display: inline-block;
   width: 0.6rem;
   height: 0.6rem;
-  border-radius: 50%;
+  transform: rotate(45deg);
 }
 
 .breakdown {
@@ -357,52 +598,85 @@ button:disabled {
 }
 
 .breakdown th {
-  padding: 0.1rem 1.5rem 0.1rem 0;
+  padding: 0.15rem 1.5rem 0.15rem 0;
+  color: var(--muted);
   font-weight: normal;
   text-align: left;
 }
 
 .breakdown td {
-  padding: 0.1rem 0.75rem 0.1rem 0;
+  padding: 0.15rem 0.75rem 0.15rem 0;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
 .badge {
-  padding: 0 0.4rem;
-  border-radius: 1rem;
-  background: #fff1e5;
-  color: #bc4c00;
-  font-size: 0.75rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--gold-dark);
+  color: var(--gold);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .card footer {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 1.2rem;
-  margin-top: 0.6rem;
-  font-size: 0.85rem;
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgb(70 55 20 / 0.6);
+  font-size: 0.8rem;
 }
 
 .meta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
-  margin: 1rem 0 0;
-  font-size: 0.85rem;
+  margin: 1.2rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  background: rgb(10 20 40 / 0.6);
+  font-size: 0.82rem;
 }
 
 .meta dt {
   color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .meta dd {
   margin: 0;
+  color: var(--gold-light);
+}
+
+/* Dark scrollbars to match the client. */
+* {
+  scrollbar-color: var(--gold-dark) #010a13;
 }
 
 @media (max-width: 700px) {
   .player,
   .teams {
     grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .card header {
+    flex-wrap: wrap;
+  }
+
+  .role {
+    min-width: 0;
+    flex: 1 1 30%;
+  }
+
+  .primary {
+    flex: 1 1 100%;
   }
 }

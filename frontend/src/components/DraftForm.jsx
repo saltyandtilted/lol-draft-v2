@@ -62,7 +62,7 @@ export default function DraftForm({ champions, platforms, draft, onChange, onSub
       </fieldset>
 
       <div className="teams">
-        <fieldset>
+        <fieldset className="ally">
           <legend>Allies</legend>
           {POSITIONS.filter((p) => p !== draft.position).map((p) => (
             <label key={p} className="slot">
@@ -78,7 +78,7 @@ export default function DraftForm({ champions, platforms, draft, onChange, onSub
             </label>
           ))}
         </fieldset>
-        <fieldset>
+        <fieldset className="enemy">
           <legend>Enemies</legend>
           {POSITIONS.map((p) => (
             <label key={p} className="slot">

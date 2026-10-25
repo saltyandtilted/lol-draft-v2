@@ -91,6 +91,7 @@ function App() {
           )}
         </p>
       </header>
+      <div className="ornament" aria-hidden="true" />
 
       {startupError && <p className="error banner">{startupError}</p>}
       {!startupError && !meta && <p className="muted">Loading champions…</p>}
