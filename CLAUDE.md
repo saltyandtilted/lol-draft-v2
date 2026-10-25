@@ -119,9 +119,10 @@ Tok dat v kódu (kde co hledat):
   nejvyšší mastery hráče, původní model v1 (jen jako srovnávací funkce).
 - Metriky: log-loss, Brier, AUC, kalibrace; hit@k; stabilita top 5 (SMAA).
 - Očekávaná přesnost predikce z draftu je jen 52 až 60 %.
-- Stav (backtest 16.20 → 16.21): AUC 0,53, od konstanty neprůkazné; hit@5 v2 je průkazně pod
-  baseline „nejhranější“, proti „vyhlazený winrate“ a v1 neprůkazné; cross-fit regrese bez signálu.
-  Příčina je hlavně málo dat (matchupy a dua pod prahem).
+- Stav (backtest 16.20 → 16.21, 1530 + 1499 zápasů): AUC 0,51, od konstanty neprůkazné;
+  hit@5 v2 průkazně pod „nejhranější“ i v1, proti „vyhlazený winrate“ neprůkazné; #1 od v2 je na
+  novém patchi mírně silnější než skutečný pick (+0,15 pb). Síla hrdiny se nereplikuje ani mezi
+  polovinami jednoho patche (korelace ~0): s desítkami her na hrdinu je winrate hlavně šum.
 
 ## Milníky (podrobně v docs/pruvodce.md)
 1. Brainstorm: přečti plán a původní kód (jen čtení), zapiš rozhodnutí

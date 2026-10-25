@@ -208,8 +208,14 @@ hrdina s nejvyšší mastery hráče; původní model v1 z diplomky (jen jako sr
 - [x] Backtest 16.20 → 16.21 (docs/vysledky.md): predikce výhry od konstanty neprůkazná
   (AUC 0,53), hit@5 v2 průkazně pod baseline „nejhranější“, proti vyhlazenému winrate a v1
   neprůkazné; cross-fit regrese bez signálu. Hlavní omezení je málo dat.
-- [ ] Víc zápasů (tisíce na patch), aby B a C nebyly jen priory; pak backtest zopakovat
-  (skill `/new-patch`).
+- [x] Víc zápasů: 3029 (16.20: 1530, 16.21: 1499). Backtest se nezlepšil (AUC 0,53 → 0,51,
+  hit@5 v2 18 % → 13 % při větší nabídce kandidátů). Kontrola: korelace winrate hrdiny mezi
+  16.20 a 16.21 je ~0, ale stejně ~0 je i mezi dvěma náhodnými polovinami 16.20. Nejde tedy
+  o změnu mety, ale o šum: při 40–100 hrách je chyba winrate ±5–8 pb, skutečné rozdíly
+  hrdinů 2–3 pb. Spolehlivá síla A potřebuje stovky her na hrdinu a roli (desítky tisíc
+  zápasů na patch), matchupy a dua ještě řádově víc.
+- [ ] Rozhodnout, jestli sbírat dál (Personal API Key, několik dní sběru) nebo přijmout, že
+  prototyp s development key nemá dost dat a jeho hodnota je hlavně v metodice a vysvětlení.
 - [x] D a E vyzkoušené na reálném profilu (Challenger EUNE, 25. 10. 2026): s priorem 10 her dala
   forma po 3 výhrách ze 3 +11 pb a přebila vše ostatní. Prior zvýšen na 50 her a profil bere
   30 posledních her místo 20 (víc by se s development key nevešly tři profily za 2 minuty;
