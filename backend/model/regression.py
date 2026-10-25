@@ -26,13 +26,18 @@ def fit_logistic(x: np.ndarray, y: np.ndarray, l2: float = 1.0, iterations: int 
     return beta
 
 
-def match_features(conn, champions: pd.DataFrame, matchups: pd.DataFrame, duos: pd.DataFrame) -> pd.DataFrame:
-    """Per match: blue minus red sums of A, lane B and C, plus blue_win."""
-    parts = pd.read_sql_query(
-        "SELECT p.match_id, p.team_id, p.position, p.champion_id, m.blue_win "
+def load_parts(conn) -> pd.DataFrame:
+    return pd.read_sql_query(
+        "SELECT p.match_id, p.team_id, p.position, p.champion_id, m.blue_win, m.patch "
         "FROM participants p JOIN matches m ON m.match_id = p.match_id",
         conn,
     )
+
+
+def match_features(parts: pd.DataFrame, champions: pd.DataFrame, matchups: pd.DataFrame,
+                   duos: pd.DataFrame) -> pd.DataFrame:
+    """Per match: blue minus red sums of A, lane B and C, plus blue_win. `parts` from load_parts."""
+    parts = parts[["match_id", "team_id", "position", "champion_id", "blue_win"]].copy()
     a = champions.set_index(["champion_id", "position"])["dev_logodds"]
     parts["A"] = a.reindex(pd.MultiIndex.from_frame(parts[["champion_id", "position"]])).fillna(0).to_numpy()
 
@@ -62,7 +67,7 @@ def match_features(conn, champions: pd.DataFrame, matchups: pd.DataFrame, duos: 
 
 
 def diagnostic(conn, champions, matchups, duos, l2: float = 1.0) -> dict:
-    features = match_features(conn, champions, matchups, duos)
+    features = match_features(load_parts(conn), champions, matchups, duos)
     beta = fit_logistic(features[["A", "B", "C"]].to_numpy(), features["blue_win"].to_numpy(), l2)
     return {
         "matches": len(features),

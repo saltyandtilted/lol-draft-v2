@@ -75,3 +75,9 @@ class Aggregates:
         names = dict(conn.execute("SELECT champion_id, name FROM champions").fetchall())
         return cls(read("champion_role_stats"), read("matchup_stats"), read("duo_stats"),
                    read("champion_profile"), meta, names)
+
+    @classmethod
+    def from_tables(cls, tables: dict, meta: dict, names: dict | None = None) -> "Aggregates":
+        """From the output of pipeline.aggregate.compute, kept in memory (backtest)."""
+        return cls(tables["champion_role_stats"], tables["matchup_stats"], tables["duo_stats"],
+                   tables["champion_profile"], meta, names or {})

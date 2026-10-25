@@ -168,21 +168,23 @@ def _shift(pairs: pd.DataFrame, keys: list[str], prior_precision) -> pd.DataFram
     return out.drop(columns=["resid", "info"])
 
 
-def matchup_stats(df: pd.DataFrame) -> pd.DataFrame:
+def matchup_stats(df: pd.DataFrame, prior_scale: float = 1.0) -> pd.DataFrame:
+    """`prior_scale` multiplies PRIOR_SD (sensitivity analysis only)."""
     pairs = _pairs(df, same_team=False)
     pairs = pairs.assign(
         expected=pairs["dev"] - pairs["o_dev"],
         lane=(pairs["position"] == pairs["o_position"]).astype(int),
     )
-    precision = np.where(pairs["lane"] == 1, 1 / PRIOR_SD["lane"] ** 2, 1 / PRIOR_SD["off_lane"] ** 2)
+    lane_sd, off_sd = PRIOR_SD["lane"] * prior_scale, PRIOR_SD["off_lane"] * prior_scale
+    precision = np.where(pairs["lane"] == 1, 1 / lane_sd**2, 1 / off_sd**2)
     out = _shift(pairs, ["champion_id", "position", "o_champion", "lane"], precision)
     return out.rename(columns={"o_champion": "enemy_champion_id"})
 
 
-def duo_stats(df: pd.DataFrame) -> pd.DataFrame:
+def duo_stats(df: pd.DataFrame, prior_scale: float = 1.0) -> pd.DataFrame:
     pairs = _pairs(df, same_team=True)
     pairs = pairs.assign(expected=pairs["dev"] + pairs["o_dev"])
-    out = _shift(pairs, ["champion_id", "position", "o_champion"], 1 / PRIOR_SD["duo"] ** 2)
+    out = _shift(pairs, ["champion_id", "position", "o_champion"], 1 / (PRIOR_SD["duo"] * prior_scale) ** 2)
     return out.rename(columns={"o_champion": "ally_champion_id"})
 
 
@@ -241,8 +243,11 @@ def champion_profile(df: pd.DataFrame) -> pd.DataFrame:
 # --- Orchestration ------------------------------------------------------------------------------
 
 
-def aggregate(conn) -> dict:
-    raw = load_participants(conn)
+def compute(raw: pd.DataFrame, prior_scale: float = 1.0) -> tuple[dict, dict]:
+    """Aggregate tables and summary from participant rows, without touching the database.
+
+    The backtest calls this on matches of the training patch only.
+    """
     if raw.empty:
         raise ValueError("no matches in the database, run pipeline.collect first")
     df, patches = add_patch_weights(raw)
@@ -251,8 +256,8 @@ def aggregate(conn) -> dict:
     dev = champions.set_index(["champion_id", "position"])["dev_logodds"]
     df["dev"] = dev.reindex(pd.MultiIndex.from_frame(df[["champion_id", "position"]])).to_numpy()
 
-    matchups = matchup_stats(df)
-    duos = duo_stats(df)
+    matchups = matchup_stats(df, prior_scale)
+    duos = duo_stats(df, prior_scale)
     champions = champions.merge(matchup_spread(matchups), on=["champion_id", "position"], how="left")
     champions["matchup_spread"] = smooth_spread(champions)
     profile = champion_profile(df)
@@ -267,7 +272,11 @@ def aggregate(conn) -> dict:
         if table.isna().any().any():
             raise ValueError(f"{name} contains missing values: {table.columns[table.isna().any()].tolist()}")
 
-    summary = _summary(raw, df, patches, champions, matchups, duos, profile)
+    return tables, _summary(raw, df, patches, champions, matchups, duos, profile)
+
+
+def aggregate(conn) -> dict:
+    tables, summary = compute(load_participants(conn))
     with conn:
         for name, table in tables.items():
             table.to_sql(name, conn, if_exists="replace", index=False)
