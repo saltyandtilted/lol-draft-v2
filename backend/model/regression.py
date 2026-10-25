@@ -1,8 +1,9 @@
 """L2-regularised logistic regression (Newton's method), used only as a diagnostic.
 
 It checks whether the summed criteria A-C explain match outcomes and how strongly. The weights
-of A-D stay equal: fitted on the previous patch, the coefficients did not carry over to the
-next one (docs/vysledky.md). In model.compare the diagnostic is in-sample, so it is optimistic.
+of A-D stay equal: cross-fitted in the backtest (aggregates from one half of the matches, fit on
+the other half), the coefficients show no reliable signal yet (docs/vysledky.md). In model.compare
+the diagnostic is in-sample, so its large coefficients are optimistic.
 """
 
 import numpy as np

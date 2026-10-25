@@ -28,6 +28,10 @@ class RiotApiError(RuntimeError):
     pass
 
 
+class RiotRateLimited(RiotApiError):
+    """The next request would wait longer than the client's `max_wait` (app requests only)."""
+
+
 class RateLimiter:
     """Sliding-window limiter that satisfies several (max_calls, seconds) windows at once.
 
@@ -79,7 +83,10 @@ class RiotClient:
         session: requests.Session | None = None,
         limiter_factory: Callable[[], RateLimiter] = RateLimiter,
         sleep: Callable[[float], None] = time.sleep,
+        max_wait: float | None = None,
     ):
+        """`max_wait`: raise RiotRateLimited instead of sleeping longer than this many seconds
+        (the app must answer quickly; the pipeline keeps the default None and simply waits)."""
         if not api_key:
             raise RiotKeyError("RIOT_API_KEY is not set in .env")
         self.platform = platform
@@ -90,6 +97,7 @@ class RiotClient:
         self._limiter_factory = limiter_factory
         self._limiters: dict[str, RateLimiter] = {}
         self._sleep = sleep
+        self.max_wait = max_wait
         self.request_count = 0
         self.rate_limited_count = 0
 
@@ -105,6 +113,9 @@ class RiotClient:
         limiter = self._limiter(host)
         server_errors = 0
         while True:
+            wait = limiter.wait_time()
+            if self.max_wait is not None and wait > self.max_wait:
+                raise RiotRateLimited(f"rate limit of {host} would need a {wait:.0f} s wait")
             limiter.acquire()
             self.request_count += 1
             try:
@@ -129,6 +140,8 @@ class RiotClient:
             if status == 429:
                 self.rate_limited_count += 1
                 retry_after = float(response.headers.get("Retry-After", 10))
+                if self.max_wait is not None and retry_after > self.max_wait:
+                    raise RiotRateLimited(f"429 from {host}, Retry-After {retry_after:.0f} s")
                 log.warning(
                     "429 from %s (%s limit), waiting %.0f s",
                     host,

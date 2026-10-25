@@ -1,7 +1,7 @@
 """Backtest of model v2 on a newer patch than its aggregates, against simple baselines.
 
 Usage (from backend/):
-    .venv\\Scripts\\python -m model.backtest [--train-patch 16.20 --test-patch 16.21 --drafts 600]
+    .venv\\Scripts\\python -m model.backtest [--train-patch 16.20 --test-patch 16.21 --drafts N]
 
 Aggregates are computed in memory from the training patch only, so no test match leaks into
 the model. The database is not modified. Only the draft part of the model is tested (A, B, C,
@@ -81,7 +81,8 @@ def split_by_patch(raw: pd.DataFrame, parts: pd.DataFrame, bans: pd.DataFrame,
     if split.train_raw.empty or split.test_raw.empty:
         raise SystemExit(f"no matches for patch {train_patch} or {test_patch}")
     leaked = split.train_ids & split.test_ids
-    assert not leaked, f"{len(leaked)} matches in both train and test"
+    if leaked:  # not an assert: python -O would strip the only leakage guard
+        raise ValueError(f"{len(leaked)} matches in both train and test")
     return split
 
 
@@ -102,21 +103,36 @@ def train_aggregates(split: Split, prior_scale: float = 1.0, test: bool = False)
 # --- Win prediction -----------------------------------------------------------------------------
 
 
-def win_prediction(split: Split, agg: Aggregates) -> dict:
-    """Probabilities of a blue win on test matches from three predictors."""
-    features = {}
-    for name, ids in (("train", split.train_ids), ("test", split.test_ids)):
-        parts = split.parts[split.parts["match_id"].isin(ids)]
-        features[name] = regression.match_features(parts, agg.champions, agg.matchups, agg.duos)
-    train, test = features["train"], features["test"]
+def _features(split: Split, agg: Aggregates, ids) -> pd.DataFrame:
+    parts = split.parts[split.parts["match_id"].isin(ids)]
+    return regression.match_features(parts, agg.champions, agg.matchups, agg.duos)
+
+
+REGRESSION = "v2: logistická regrese na A, B, C (cross-fit)"
+
+
+def win_prediction(split: Split, agg: Aggregates, prior_scale: float = 1.0, seed: int = 0) -> dict:
+    """Probabilities of a blue win on test matches from four predictors.
+
+    The regression is cross-fitted: aggregates from one half of the training matches, coefficients
+    fitted on the other half. Fitting on matches the aggregates came from would inflate them.
+    """
+    test = _features(split, agg, split.test_ids)
     x_cols = ["A", "B", "C"]
-    beta = regression.fit_logistic(train[x_cols].to_numpy(), train["blue_win"].to_numpy())
+    train_ids = np.array(sorted(split.train_ids))
+    half = set(np.random.default_rng(seed).permutation(train_ids)[: len(train_ids) // 2])
+    half_raw = split.train_raw[split.train_raw["match_id"].isin(half)]
+    half_agg = Aggregates.from_tables(*pipeline_aggregate.compute(half_raw, prior_scale))
+    fit = _features(split, half_agg, split.train_ids - half)
+    beta = regression.fit_logistic(fit[x_cols].to_numpy(), fit["blue_win"].to_numpy())
+    test_half = _features(split, half_agg, split.test_ids).reindex(test.index).fillna(0.0)
+    blue_rate = split.parts[split.parts["match_id"].isin(split.train_ids)].groupby("match_id")["blue_win"].first()
     y = test["blue_win"].to_numpy()
     preds = {
-        "konstanta (winrate modré strany)": np.full(len(test), train["blue_win"].mean()),
+        "konstanta (winrate modré strany)": np.full(len(test), blue_rate.mean()),
         "v2: jen A (síla hrdiny)": sigmoid(test["A"].to_numpy()),
         "v2: A+B+C (bez fitování)": sigmoid(test[x_cols].sum(axis=1).to_numpy()),
-        "v2: logistická regrese na A, B, C": sigmoid(beta[0] + test[x_cols].to_numpy() @ beta[1:]),
+        REGRESSION: sigmoid(beta[0] + test_half[x_cols].to_numpy() @ beta[1:]),
     }
     rows = []
     for name, p in preds.items():
@@ -127,13 +143,25 @@ def win_prediction(split: Split, agg: Aggregates) -> dict:
     diff_ci = bootstrap_ci(lambda idx: metrics.log_loss(y[idx], base[idx]) - metrics.log_loss(y[idx], best[idx]),
                            len(y))
     return {"table": pd.DataFrame(rows), "y": y, "preds": preds, "beta": beta, "matches": len(test),
-            "train_matches": len(train), "logloss_gain_ci": diff_ci}
+            "train_matches": len(split.train_ids), "logloss_gain_ci": diff_ci}
 
 
-def bootstrap_ci(statistic, n: int, samples: int = BOOTSTRAP, seed: int = 0) -> tuple[float, float, float]:
-    """Point estimate and 90 % percentile bootstrap interval of statistic(indices)."""
+def bootstrap_ci(statistic, n: int, samples: int = BOOTSTRAP, seed: int = 0,
+                 groups=None) -> tuple[float, float, float]:
+    """Point estimate and 90 % percentile bootstrap interval of statistic(indices).
+
+    With `groups` (one label per row, e.g. match_id) whole groups are resampled, so rows from
+    the same match are not treated as independent evidence.
+    """
+    if n == 0:
+        return float("nan"), float("nan"), float("nan")
     rng = np.random.default_rng(seed)
-    values = [statistic(rng.integers(0, n, n)) for _ in range(samples)]
+    if groups is None:
+        draw = lambda: rng.integers(0, n, n)  # noqa: E731
+    else:
+        members = list(pd.Series(np.arange(n)).groupby(np.asarray(groups)).apply(np.array))
+        draw = lambda: np.concatenate([members[i] for i in rng.integers(0, len(members), len(members))])  # noqa: E731
+    values = [statistic(draw()) for _ in range(samples)]
     return float(statistic(np.arange(n))), float(np.percentile(values, 5)), float(np.percentile(values, 95))
 
 
@@ -141,14 +169,18 @@ def bootstrap_ci(statistic, n: int, samples: int = BOOTSTRAP, seed: int = 0) -> 
 
 
 def sample_drafts(split: Split, count: int, seed: int = 0) -> list[dict]:
-    """Drafts from test matches: one player's pick is hidden, a random part of the draft is known."""
+    """Drafts from test matches: one player's pick is hidden, a random part of the draft is known.
+
+    Matches are drawn without replacement; only when `count` exceeds the number of test matches
+    does a match give a second draft (the bootstrap then resamples whole matches).
+    """
     rng = np.random.default_rng(seed)
     test = split.test_raw
-    match_ids = sorted(split.test_ids)
+    order = rng.permutation(sorted(split.test_ids))
     bans = split.bans.groupby("match_id")["champion_id"].apply(list).to_dict()
     drafts = []
     for i in range(count):
-        match_id = match_ids[rng.integers(len(match_ids))]
+        match_id = order[i % len(order)]
         players = test[test["match_id"] == match_id]
         team = int(rng.choice([100, 200]))
         position = str(rng.choice(POSITIONS))
@@ -206,14 +238,16 @@ def reference_strength(ref: Aggregates) -> pd.Series:
 def evaluate_recommendations(agg: Aggregates, ref: Aggregates, drafts: list[dict], v1_champions) -> dict:
     weights, _ = goal_weights()
     strength = reference_strength(ref)
-    records = []
+    records, v2_orders = [], []
     for item in drafts:
         ranked, _ = rankings(agg, item, weights, v1_champions)
+        v2_orders.append(ranked["v2"])
         position = item["draft"].position
         for method, order in ranked.items():
             top5 = order[:5]
             records.append({
                 "method": method,
+                "match_id": item["match_id"],
                 "known": item["known"],
                 "rank": metrics.rank_of(order, item["actual"]),
                 "win": item["win"],
@@ -221,7 +255,7 @@ def evaluate_recommendations(agg: Aggregates, ref: Aggregates, drafts: list[dict
                 "ref_top5": np.nanmean([strength.get((c, position), np.nan) for c in top5]) if top5 else np.nan,
                 "ref_actual": strength.get((item["actual"], position), np.nan),
             })
-    return {"records": pd.DataFrame(records)}
+    return {"records": pd.DataFrame(records), "v2_orders": v2_orders}
 
 
 def summarize_hits(records: pd.DataFrame) -> pd.DataFrame:
@@ -249,7 +283,8 @@ def paired_hit_ci(records: pd.DataFrame, a: str, b: str, k: int = 5) -> tuple[fl
         r = records[records["method"] == method]["rank"].to_numpy(dtype=float)
         return (~np.isnan(r)) & (np.nan_to_num(r, nan=np.inf) <= k)
     ha, hb = hits(a), hits(b)
-    return bootstrap_ci(lambda idx: float(ha[idx].mean() - hb[idx].mean()), len(ha))
+    groups = records[records["method"] == a]["match_id"].to_numpy()
+    return bootstrap_ci(lambda idx: float(ha[idx].mean() - hb[idx].mean()), len(ha), groups=groups)
 
 
 def pp(logodds: float) -> float:
@@ -261,7 +296,7 @@ def ref_gain_ci(records: pd.DataFrame, method: str) -> tuple[float, float, float
     """Reference strength of the method's #1 minus the actual pick, in percentage points."""
     g = records[records["method"] == method].dropna(subset=["ref_top1", "ref_actual"])
     diff = (g["ref_top1"] - g["ref_actual"]).to_numpy()
-    return bootstrap_ci(lambda idx: pp(diff[idx].mean()), len(diff))
+    return bootstrap_ci(lambda idx: pp(diff[idx].mean()), len(diff), groups=g["match_id"].to_numpy())
 
 
 # --- Sensitivity --------------------------------------------------------------------------------
@@ -288,9 +323,10 @@ def smaa_stability(agg: Aggregates, drafts: list[dict]) -> dict:
             "drafts": len(rho_p)}
 
 
-def weight_sensitivity(agg: Aggregates, drafts: list[dict]) -> pd.DataFrame:
+def weight_sensitivity(agg: Aggregates, drafts: list[dict], base_orders: list[list[int]]) -> pd.DataFrame:
+    """`base_orders`: v2 orders with the default weights, already computed by evaluate_recommendations."""
     base_weights, base_cr = goal_weights()
-    base = {i: rank_v2(agg, d["draft"], base_weights)[0] for i, d in enumerate(drafts)}
+    base = dict(enumerate(base_orders))
     rows = [{"variant": "výchozí AHP (7:1, 6:1)", "weights": base_weights, "cr": base_cr,
              "top5_overlap": 5.0, "same_top1": 1.0,
              "hit@5": metrics.hit_at_k([metrics.rank_of(base[i], d["actual"]) for i, d in enumerate(drafts)], 5)}]
@@ -306,17 +342,20 @@ def weight_sensitivity(agg: Aggregates, drafts: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def prior_sensitivity(split: Split, drafts: list[dict]) -> pd.DataFrame:
+def _prior_row(scale: float, win_table: pd.DataFrame, ranks: list) -> dict:
+    wp = win_table.set_index("model").loc["v2: A+B+C (bez fitování)"]
+    return {"prior_scale": scale, "log_loss": wp["log_loss"], "auc": wp["auc"], "hit@5": metrics.hit_at_k(ranks, 5)}
+
+
+def prior_sensitivity(split: Split, drafts: list[dict], base_win: dict, base_orders: list[list[int]]) -> pd.DataFrame:
+    """Scale 1.0 reuses the main run's results; only the other scales are recomputed."""
     weights, _ = goal_weights()
-    rows = []
-    for scale in (1.0, *PRIOR_SCALES):
+    rows = [_prior_row(1.0, base_win["table"],
+                       [metrics.rank_of(o, d["actual"]) for o, d in zip(base_orders, drafts)])]
+    for scale in PRIOR_SCALES:
         agg = train_aggregates(split, prior_scale=scale)
-        wp = win_prediction(split, agg)["table"].set_index("model")
         ranks = [metrics.rank_of(rank_v2(agg, d["draft"], weights)[0], d["actual"]) for d in drafts]
-        rows.append({"prior_scale": scale,
-                     "log_loss": wp.loc["v2: A+B+C (bez fitování)", "log_loss"],
-                     "auc": wp.loc["v2: A+B+C (bez fitování)", "auc"],
-                     "hit@5": metrics.hit_at_k(ranks, 5)})
+        rows.append(_prior_row(scale, win_prediction(split, agg, prior_scale=scale)["table"], ranks))
     return pd.DataFrame(rows)
 
 
@@ -334,7 +373,7 @@ def charts(win: dict, records: pd.DataFrame, stability: dict, out_dir: Path) -> 
 
     fig, ax = plt.subplots(figsize=(5, 5))
     ax.plot([0.3, 0.7], [0.3, 0.7], color="#999", linestyle="--", linewidth=1, label="dokonalá kalibrace")
-    for name, color in (("v2: A+B+C (bez fitování)", "#2a6fdb"), ("v2: logistická regrese na A, B, C", "#e07b00")):
+    for name, color in (("v2: A+B+C (bez fitování)", "#2a6fdb"), (REGRESSION, "#e07b00")):
         bins = metrics.reliability_bins(win["y"], win["preds"][name], bins=8)
         ax.plot(bins["predicted"], bins["observed"], marker="o", color=color, label=name)
     ax.set_xlim(0.3, 0.7)
@@ -423,8 +462,9 @@ def to_markdown(split: Split, agg: Aggregates, win: dict, hits: pd.DataFrame, ph
         "Nižší log-loss a Brier jsou lepší, AUC 0,5 je náhoda. Plán čeká přesnost jen 52 až 60 %.",
         f"Zlepšení log-loss A+B+C proti konstantě: {ci_text(win['logloss_gain_ci'], digits=4)}; "
         "kladné = v2 je lepší.",
-        f"Koeficienty regrese fitované na tréninkovém patchi: A {b[1]:.2f}, B {b[2]:.2f}, C {b[3]:.2f}, "
-        f"intercept {b[0]:.3f} (koeficient 1 = kritérium je škálované přesně).",
+        f"Regrese je cross-fit: agregace z poloviny tréninkových zápasů, koeficienty fitované na druhé "
+        f"polovině. Koeficienty: A {b[1]:.2f}, B {b[2]:.2f}, C {b[3]:.2f}, intercept {b[0]:.3f} "
+        "(koeficient 1 = kritérium je škálované přesně).",
         "",
         f"![Kalibrace](img/{images['reliability']})",
         "",
@@ -436,9 +476,9 @@ def to_markdown(split: Split, agg: Aggregates, win: dict, hits: pd.DataFrame, ph
         "| Metoda | pokrytí | hit@1 | hit@5 | hit@10 | MRR | síla #1 na novém patchi | síla top 5 |",
         "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
-    for r in hits.itertuples():
-        lines.append(f"| {r.method} | {pct(r.coverage)} | {pct(r._4)} | {pct(r._5)} | {pct(r._6)} | "
-                     f"{fmt(r.mrr)} | {r.ref_top1_pp:+.2f} pb | {r.ref_top5_pp:+.2f} pb |")
+    for r in hits.to_dict("records"):
+        lines.append(f"| {r['method']} | {pct(r['coverage'])} | {pct(r['hit@1'])} | {pct(r['hit@5'])} | "
+                     f"{pct(r['hit@10'])} | {fmt(r['mrr'])} | {r['ref_top1_pp']:+.2f} pb | {r['ref_top5_pp']:+.2f} pb |")
     lines += [
         "",
         "- **Pokrytí:** skutečný pick je mezi kandidáty metody (v2 a obě baseline mají stejný pool: hrdinové "
@@ -489,10 +529,10 @@ def to_markdown(split: Split, agg: Aggregates, win: dict, hits: pd.DataFrame, ph
         "| Varianta | váhy W / E / F | CR | průměrná shoda top 5 | stejná #1 | hit@5 |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
-    for r in weights_table.itertuples():
-        w = r.weights
-        lines.append(f"| {r.variant} | {w['W']:.2f} / {w['E']:.2f} / {w['F']:.2f} | {r.cr:.3f} | "
-                     f"{r.top5_overlap:.1f} z 5 | {pct(r.same_top1)} | {pct(r._6)} |")
+    for r in weights_table.to_dict("records"):
+        w = r["weights"]
+        lines.append(f"| {r['variant']} | {w['W']:.2f} / {w['E']:.2f} / {w['F']:.2f} | {r['cr']:.3f} | "
+                     f"{r['top5_overlap']:.1f} z 5 | {pct(r['same_top1'])} | {pct(r['hit@5'])} |")
     lines += [
         "",
         "**Síla priorů matchupů a du** (násobek `PRIOR_SD`; 0,5 = víc shrinkage, 2 = méně):",
@@ -500,8 +540,8 @@ def to_markdown(split: Split, agg: Aggregates, win: dict, hits: pd.DataFrame, ph
         "| Násobek | log-loss A+B+C | AUC | hit@5 v2 |",
         "| --- | --- | --- | --- |",
     ]
-    for r in priors.itertuples():
-        lines.append(f"| {r.prior_scale:g} | {fmt(r.log_loss, 4)} | {fmt(r.auc)} | {pct(r._4)} |")
+    for r in priors.to_dict("records"):
+        lines.append(f"| {r['prior_scale']:g} | {fmt(r['log_loss'], 4)} | {fmt(r['auc'])} | {pct(r['hit@5'])} |")
     lines += ["", LIMITS]
     return "\n".join(lines) + "\n"
 
@@ -552,23 +592,25 @@ LIMITS = """## Omezení
 # --- Orchestration ------------------------------------------------------------------------------
 
 
-def run(conn, train_patch=None, test_patch=None, draft_count=600, seed=0, use_v1=True,
+def run(conn, train_patch=None, test_patch=None, draft_count=None, seed=0, use_v1=True,
         output: Path | None = OUTPUT, images: Path = IMAGES) -> dict:
+    """`draft_count` None: one draft per test match."""
     split = load_split(conn, train_patch, test_patch)
     agg = train_aggregates(split)
     ref = train_aggregates(split, test=True)
-    win = win_prediction(split, agg)
-    drafts = sample_drafts(split, draft_count, seed)
+    win = win_prediction(split, agg, seed=seed)
+    drafts = sample_drafts(split, draft_count or len(split.test_ids), seed)
     v1_champions = load_v1_champions() if use_v1 and V1_CHAMPIONS.exists() else None
-    records = evaluate_recommendations(agg, ref, drafts, v1_champions)["records"]
+    evaluated = evaluate_recommendations(agg, ref, drafts, v1_champions)
+    records, v2_orders = evaluated["records"], evaluated["v2_orders"]
     hits = summarize_hits(records)
     phases = hits_by_phase(records)
     others = [m for m in records["method"].unique() if m != "v2"]
     hit_cis = {m: paired_hit_ci(records, "v2", m) for m in others}
     ref_cis = {m: ref_gain_ci(records, m) for m in records["method"].unique()}
     stability = smaa_stability(agg, drafts[:SMAA_DRAFTS])
-    weights_table = weight_sensitivity(agg, drafts)
-    priors = prior_sensitivity(split, drafts)
+    weights_table = weight_sensitivity(agg, drafts, v2_orders)
+    priors = prior_sensitivity(split, drafts, win, v2_orders)
     result = {"split": split, "win": win, "hits": hits, "phases": phases, "hit_cis": hit_cis,
               "ref_cis": ref_cis, "stability": stability, "weights": weights_table, "priors": priors}
     if output is not None:
@@ -585,7 +627,7 @@ def main(argv=None) -> None:
     parser.add_argument("--db", default=Config.DATABASE_PATH)
     parser.add_argument("--train-patch")
     parser.add_argument("--test-patch")
-    parser.add_argument("--drafts", type=int, default=600)
+    parser.add_argument("--drafts", type=int, help="number of drafts (default: one per test match)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--no-v1", action="store_true", help="skip the v1 comparison")
     parser.add_argument("--output", default=str(OUTPUT))

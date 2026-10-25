@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from model import criteria
 from model.data import POSITIONS, Aggregates, Draft, Pick
 from model.recommend import recommend
-from pipeline.riot_client import RiotApiError, RiotClient, RiotKeyError
+from pipeline.riot_client import RiotApiError, RiotClient, RiotKeyError, RiotRateLimited
 
 from . import db
 from .profile import PLATFORMS, ProfileCache, RiotIdNotFound, fetch_profile, parse_riot_id
@@ -23,6 +23,9 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 
 ICON_URL = "https://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{key}.png"
 Position = Literal["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
+# A recommendation must not hang on the Riot rate limit: wait at most this long, then answer
+# without the personal criteria.
+PROFILE_MAX_WAIT = 5.0
 
 
 class ApiError(Exception):
@@ -111,7 +114,7 @@ def _riot_client(platform: str) -> RiotClient:
     clients = _state()["clients"]
     if platform not in clients:
         clients[platform] = RiotClient(current_app.config["RIOT_API_KEY"], platform=platform,
-                                       region=PLATFORMS[platform]["region"])
+                                       region=PLATFORMS[platform]["region"], max_wait=PROFILE_MAX_WAIT)
     return clients[platform]
 
 
@@ -134,6 +137,11 @@ def _profile(riot_id: str, platform: str) -> tuple:
         return None, {"used": False}, [
             "Riot API key is missing or expired – renew it in .env. "
             "Personal form (D) and comfort (E) are neutral."]
+    except RiotRateLimited as exc:
+        log.warning("profile fetch skipped: %s", exc)
+        return None, {"used": False}, [
+            "Riot API rate limit reached (several new Riot IDs within 2 minutes) – try again in a "
+            "minute or two. Personal form (D) and comfort (E) are neutral."]
     except RiotApiError as exc:
         log.warning("profile fetch failed: %s", exc)
         return None, {"used": False}, [

@@ -1,6 +1,6 @@
 import pytest
 
-from pipeline.riot_client import RateLimiter, RiotApiError, RiotClient, RiotKeyError
+from pipeline.riot_client import RateLimiter, RiotApiError, RiotClient, RiotKeyError, RiotRateLimited
 
 FAKE_TEST_KEY = "TEST-not-a-real-key"
 
@@ -128,6 +128,27 @@ def test_platform_and_region_routing():
 
     assert session.urls[0].startswith("https://eun1.api.riotgames.com/lol/league-exp/v4/")
     assert session.urls[1].startswith("https://europe.api.riotgames.com/lol/match/v5/")
+
+
+def test_max_wait_raises_instead_of_waiting_for_the_window():
+    client, session, clock = make_client([FakeResponse(200, {})] * 101)
+    client.max_wait = 5.0
+
+    for i in range(100):  # 100 calls fill the 2-minute window (sleeping through the 1 s windows)
+        client.match(f"EUN1_{i}")
+    with pytest.raises(RiotRateLimited):
+        client.match("EUN1_100")
+    assert len(session.urls) == 100
+    assert max(clock.slept, default=0) <= 5.0 + 0.05
+
+
+def test_max_wait_raises_on_long_retry_after():
+    client, _, clock = make_client([FakeResponse(429, headers={"Retry-After": "60"})])
+    client.max_wait = 5.0
+
+    with pytest.raises(RiotRateLimited):
+        client.match("EUN1_1")
+    assert 60 not in clock.slept
 
 
 def test_missing_key_is_rejected():

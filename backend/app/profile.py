@@ -17,9 +17,11 @@ PLATFORMS = {
     "na1": {"label": "NA", "region": "americas"},
     "kr": {"label": "KR", "region": "asia"},
 }
-# Each game is one match-v5 request: 50 games + account + mastery stay under the 100 requests
-# per 2 minutes of a development key, and the profile is cached for CACHE_SECONDS.
-RECENT_GAMES = 50
+# Each game is one match-v5 request on the regional host, which allows 100 requests per 2 minutes
+# with a development key: 30 games + account leave room for three new Riot IDs in that window.
+# Profiles are cached for CACHE_SECONDS, and the app answers without D/E instead of waiting
+# (api.PROFILE_MAX_WAIT). The strong prior in criteria.FORM_PRIOR_GAMES keeps 30 games from overreacting.
+RECENT_GAMES = 30
 CACHE_SECONDS = 15 * 60
 DAY_MS = 86_400_000
 

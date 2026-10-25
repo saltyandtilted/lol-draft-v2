@@ -44,6 +44,15 @@ def test_focus_outside_top_shows_rank_and_gap(agg):
     assert 0.0 <= focus["top5_probability"] <= 1.0
 
 
+def test_focus_matches_the_top_list_for_the_same_champion(agg):
+    draft = build_draft(ChampionNames(NAMES), "TOP")
+    result = explain(agg, draft, AD_TANK)
+
+    in_top = next(c for c in result["top"] if c["champion_id"] == AD_TANK)
+    assert result["focus"]["top5_probability"] == in_top["top5_probability"]
+    assert result["focus"]["rank"] == in_top["rank"]
+
+
 def test_focus_explains_unavailable_champions(agg):
     draft = build_draft(ChampionNames(NAMES), "TOP", bans=["Test Tank"])
     assert explain(agg, draft, AD_TANK)["focus"]["reason"] == "banned or already picked"

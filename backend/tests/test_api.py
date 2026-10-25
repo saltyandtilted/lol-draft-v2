@@ -4,7 +4,7 @@ import pytest
 
 from app import db
 from pipeline import ddragon
-from pipeline.riot_client import RiotKeyError
+from pipeline.riot_client import RiotKeyError, RiotRateLimited
 from tests.model_factory import AD_CARRY, AD_TANK, AP_TANK, FLEX, make_aggregates
 from tests.test_profile import NOW_MS, TEST_PUUID, FakeProfileClient, make_match
 
@@ -17,6 +17,11 @@ TEST_CHAMPIONS = [
 class ExpiredKeyClient:
     def account_by_riot_id(self, name, tag):
         raise RiotKeyError("Riot API returned 401")
+
+
+class RateLimitedClient:
+    def account_by_riot_id(self, name, tag):
+        raise RiotRateLimited("rate limit of europe.api.riotgames.com would need a 90 s wait")
 
 
 @pytest.fixture
@@ -122,6 +127,16 @@ def test_expired_key_still_recommends_with_warning(api):
     assert body["candidates"]
     assert "expired" in body["warnings"][0]
     assert "TEST-not-a-real-key" not in response.get_data(as_text=True)
+
+
+def test_rate_limit_recommends_without_profile_instead_of_hanging(api):
+    client = RateLimitedClient()
+    response = post(api(riot_client=client), riot_id="Tester#TEST")
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["candidates"] and body["profile"] == {"used": False}
+    assert "rate limit" in body["warnings"][0]
 
 
 @pytest.mark.parametrize("body, fragment", [

@@ -24,7 +24,7 @@ from . import criteria
 from .data import Aggregates, Draft, Pick
 from .recommend import TOP_N, percentage_points, recommend
 
-WIN_PARTS = ["A", "B", "C", "D", "S"]
+ALL_CANDIDATES = 10_000  # "top n" large enough for the full ranking
 
 
 def _key(name: str) -> str:
@@ -64,13 +64,16 @@ def build_draft(names: ChampionNames, position, allies=(), enemies=(), bans=()) 
     return Draft(position.upper(), allies=allies, enemies=enemies, bans=ban_ids)
 
 
-def focus(agg: Aggregates, draft: Draft, champion_id: int, top: dict | None) -> dict:
-    """Breakdown of one champion: rank among all candidates and gap to the #1 per criterion."""
+def focus(agg: Aggregates, draft: Draft, champion_id: int, full: list[dict]) -> dict:
+    """Breakdown of one champion: rank among all candidates and gap to the #1 per criterion.
+
+    `full` is the complete ranking from recommend(), so the numbers match the top 5 exactly.
+    """
     name = agg.names.get(champion_id, str(champion_id))
+    top = full[0] if full else None
     if champion_id in draft.unavailable:
         return {"champion_id": champion_id, "name": name, "available": False,
                 "reason": "banned or already picked"}
-    full = recommend(agg, draft, top_n=10_000, smaa_samples=200, stability_k=TOP_N).candidates
     row = next((c for c in full if c["champion_id"] == champion_id), None)
     if row is None:
         roles = agg.champions[agg.champions["champion_id"] == champion_id]
@@ -90,8 +93,8 @@ def focus(agg: Aggregates, draft: Draft, champion_id: int, top: dict | None) -> 
 
 
 def explain(agg: Aggregates, draft: Draft, champion_id: int | None = None) -> dict:
-    rec = recommend(agg, draft, top_n=TOP_N)
-    top = rec.candidates[0] if rec.candidates else None
+    # One full ranking (SMAA still measures "stays in the top 5"); the top 5 is its head.
+    rec = recommend(agg, draft, top_n=ALL_CANDIDATES, stability_k=TOP_N)
     out = {
         "draft": {
             "position": draft.position,
@@ -100,11 +103,11 @@ def explain(agg: Aggregates, draft: Draft, champion_id: int | None = None) -> di
             "bans": [agg.names.get(b) for b in draft.bans],
         },
         "meta": rec.meta,
-        "top": rec.candidates,
+        "top": rec.candidates[:TOP_N],
         "notes": ["No player profile: D (personal form) and E (comfort) are neutral."],
     }
     if champion_id is not None:
-        out["focus"] = focus(agg, draft, champion_id, top)
+        out["focus"] = focus(agg, draft, champion_id, rec.candidates)
     return out
 
 
