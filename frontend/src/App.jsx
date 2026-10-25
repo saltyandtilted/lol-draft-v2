@@ -97,18 +97,33 @@ function App() {
       {!startupError && !meta && <p className="muted">Loading champions…</p>}
 
       {meta && (
-        <DraftForm
-          champions={champions}
-          platforms={meta.platforms}
-          draft={draft}
-          onChange={setDraft}
-          onSubmit={submit}
-          loading={loading}
-        />
+        <div className="layout">
+          <DraftForm
+            champions={champions}
+            platforms={meta.platforms}
+            draft={draft}
+            onChange={setDraft}
+            onSubmit={submit}
+            loading={loading}
+          />
+          <div className="output">
+            {error && <p className="error banner">{error}</p>}
+            {result ? (
+              <Results result={result} />
+            ) : (
+              !error && (
+                <div className="empty-state">
+                  <p className="empty-title">Your top 5 picks will appear here</p>
+                  <p className="muted">
+                    Choose your role, add the champions you already know and press Recommend.
+                    Every field is optional.
+                  </p>
+                </div>
+              )
+            )}
+          </div>
+        </div>
       )}
-
-      {error && <p className="error banner">{error}</p>}
-      {result && <Results result={result} />}
     </main>
   )
 }
